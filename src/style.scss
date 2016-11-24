@@ -1,0 +1,63 @@
+body {
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.editor {
+	height: 800px;
+	padding: 10px;
+}
+
+.run-widget {
+	margin-left: 20px;
+}
+
+.term {
+	font-family: Courier New, Courier, monospace;
+}
+
+.variable {
+	color: blue;
+}
+
+.arrow {
+	margin-left: 3px;
+	margin-right: 3px;
+}
+
+
+.abstraction.redex > .variable.declaration {
+	background-color: aliceblue;
+	font-weight: bold;
+	padding: 1px;
+	padding-left: 3px;
+	padding-right: 3px;
+	
+	border: 1px solid black;
+	cursor: pointer;
+}
+
+.evaluationView {
+	background-color: whitesmoke;
+}
+
+.redexVar {
+	background-color: yellow;
+	font-weight: bold;
+	padding: 1px;
+	padding-left: 3px;
+	padding-right: 3px;
+	
+	border: 1px solid black;
+	cursor: pointer;
+}
+
+.redexArg {
+	background-color: lime;
+	font-weight: bold;
+	padding: 1px;
+	padding-left: 3px;
+	padding-right: 3px;
+	
+	border: 1px solid black;
+	cursor: pointer;
+}
