@@ -43,25 +43,28 @@ function createViewFor(t: Syntaxes.Term, termContext: TermEvaluationViewContext)
 @observer
 class VariableView extends React.Component<{ term: Syntaxes.Variable, termContext: TermEvaluationViewContext }, {}> {
 	public render() {
-		const isRedexArg = this.props.termContext.selectedRedex && this.props.termContext.selectedRedex.argumentTerm === this.props.term;
-		const isRedexVar = this.props.termContext.analysisResult && this.props.termContext.analysisResult.instantiations.some(i => i.variable === this.props.term);
-		return (<span className={cn("term", "variable", isRedexVar && "redexVar", isRedexArg && "redexArg")}>{this.props.term.identifier.text}</span>);
+		const wasArg = this.props.termContext.lastAnalysisResult && this.props.termContext.lastAnalysisResult.instantiations.some(i => i.newValue === this.props.term); 
+		const isRedexArg = this.props.termContext.currentRedex && this.props.termContext.currentRedex.argumentTerm === this.props.term;
+		const isRedexVar = this.props.termContext.currentAnalysisResult && this.props.termContext.currentAnalysisResult.instantiations.some(i => i.variable === this.props.term);
+		return (<span className={cn("term", "variable", isRedexVar && "redexVar", isRedexArg && "redexArg", wasArg && "wasArg")}>{this.props.term.identifier.text}</span>);
 	}
 }
 
 @observer
 class ParenthesizedTermView extends React.Component<{ term: Syntaxes.ParenthesizedTerm, termContext: TermEvaluationViewContext }, {}> {
 	public render() { 
-		const isRedexArg = this.props.termContext.selectedRedex && this.props.termContext.selectedRedex.argumentTerm === this.props.term;
-		return (<span className={cn("term", "parenthesizedTerm", isRedexArg && "redexArg")}>({createViewFor(this.props.term.term, this.props.termContext)})</span>); 
+		const wasArg = this.props.termContext.lastAnalysisResult && this.props.termContext.lastAnalysisResult.instantiations.some(i => i.newValue === this.props.term); 
+		const isRedexArg = this.props.termContext.currentRedex && this.props.termContext.currentRedex.argumentTerm === this.props.term;
+		return (<span className={cn("term", "parenthesizedTerm", isRedexArg && "redexArg", wasArg && "wasArg")}>({createViewFor(this.props.term.term, this.props.termContext)})</span>); 
 	}
 }
 
 @observer
 class ApplicationView extends React.Component<{ term: Syntaxes.Application, termContext: TermEvaluationViewContext }, {}> {
 	public render() { 
-		const isRedexArg = this.props.termContext.selectedRedex && this.props.termContext.selectedRedex.argumentTerm === this.props.term;
-		return (<span className={cn("term", "application", Analysis.isRedex(this.props.term) && "redex", isRedexArg && "redexArg")}>
+		const wasArg = this.props.termContext.lastAnalysisResult && this.props.termContext.lastAnalysisResult.instantiations.some(i => i.newValue === this.props.term); 
+		const isRedexArg = this.props.termContext.currentRedex && this.props.termContext.currentRedex.argumentTerm === this.props.term;
+		return (<span className={cn("term", "application", Analysis.isRedex(this.props.term) && "redex", isRedexArg && "redexArg", wasArg && "wasArg")}>
 				{createViewFor(this.props.term.functionTerm, this.props.termContext)}
 				{createViewFor(this.props.term.argumentTerm, this.props.termContext)}
 			</span>); 
@@ -91,12 +94,16 @@ class AbstractionView extends React.Component<{ term: Syntaxes.Abstraction, term
 	}
 
 	public render() { 
-		const isRedexArg = this.props.termContext.selectedRedex && this.props.termContext.selectedRedex.argumentTerm === this.props.term;
+		const wasArg = this.props.termContext.lastAnalysisResult && this.props.termContext.lastAnalysisResult.instantiations.some(i => i.newValue === this.props.term); 
+		const isRedexArg = this.props.termContext.currentRedex && this.props.termContext.currentRedex.argumentTerm === this.props.term;
+		const isCurrentRedex = this.props.termContext.currentRedex && Analysis.skipParenthesizedTerm(this.props.termContext.currentRedex.functionTerm) == this.props.term;
 		const isRedexAbstraction = Analysis.isRedexAbstraction(this.props.term);
 		return (
-			<span className={cn("term", "abstraction", isRedexAbstraction && "redex", isRedexArg && "redexArg")} >
-				<span className="declaration variable" onClick={() => this.clicked()} onMouseEnter={() => this.mouseEnteredLeft(true)} onMouseLeave={() => this.mouseEnteredLeft(false)}>{this.props.term.variableDeclaration.variable.text}</span>
-				<span className="arrow"> ⟹ </span> 
+			<span className={cn("term", "abstraction", isRedexAbstraction && "redex", isRedexArg && "redexArg", isCurrentRedex && "currentRedex", wasArg && "wasArg")} >
+				<span className="variableAndArrow">
+					<span className="declaration variable" onClick={() => this.clicked()} onMouseEnter={() => this.mouseEnteredLeft(true)} onMouseLeave={() => this.mouseEnteredLeft(false)}>{this.props.term.variableDeclaration.variable.text}</span>
+					<span className="arrow"> ⟹ </span>
+				</span> 
 				{createViewFor(this.props.term.term, this.props.termContext)}
 			</span>
 		); 
@@ -104,14 +111,22 @@ class AbstractionView extends React.Component<{ term: Syntaxes.Abstraction, term
 }
 
 class TermEvaluationViewContext {
-	constructor(private readonly view: EvaluationView, private readonly idx: number, private term: Syntaxes.Term) {}
+	constructor(private readonly view: EvaluationView, private readonly idx: number, private term: Syntaxes.Term, 
+		public preselectedRedex: Syntaxes.Application|null, public preselectedAnalysisResult: { newTerm: Syntaxes.Term, instantiations: Analysis.Instantiation[] }|null,
+		public lastAnalysisResult: { newTerm: Syntaxes.Term, instantiations: Analysis.Instantiation[] }|null) {}
+
 
 	@observable selectedRedex: Syntaxes.Application|null;
 
-	@computed get analysisResult(): { newTerm: Syntaxes.Term, instantiations: { variable: Syntaxes.Variable, newValue: Syntaxes.Term }[] }|null {
-		if (!this.selectedRedex) return null;
+	@computed get currentAnalysisResult(): { newTerm: Syntaxes.Term, instantiations: Analysis.Instantiation[] }|null {
+		if (!this.selectedRedex) return this.preselectedAnalysisResult;
 
 		return Analysis.reduce(this.term, this.selectedRedex);
+	}
+
+	@computed get currentRedex(): Syntaxes.Application|null {
+		if (this.selectedRedex) return this.selectedRedex;
+		return this.preselectedRedex;
 	}
 
 	public reduceRedex(redex: Syntaxes.Application) {
@@ -120,17 +135,24 @@ class TermEvaluationViewContext {
 }
 
 @observer
-class EvaluationView extends React.Component<{ term: Syntaxes.Term, onHeightUpdate?: () => void }, {}> {
-	@observable private terms: Syntaxes.Term[] = [];
+class EvaluationView extends React.Component<{ term: Syntaxes.Term, onHeightUpdate?: () => void, onRemove: () => void }, {}> {
+	@observable private terms: { term: Syntaxes.Term, selectedRedex: Syntaxes.Application|null, step: { newTerm: Syntaxes.Term, instantiations: Analysis.Instantiation[] }|null }[] = [];
+
+	constructor(props: any) { 
+		super(props);
+		this.terms.push({ term: this.props.term, selectedRedex: null, step: null });
+	}
 
 	public reduceRedex(redex: Syntaxes.Application, termIdx: number) {
 		this.terms.length = termIdx + 1;
 
-		const t = (termIdx === -1) ? this.props.term : this.terms[termIdx];
+		const t = this.terms[termIdx];
 
-		const { instantiations, newTerm } = Analysis.reduce(t, redex);
+		const { instantiations, newTerm } = Analysis.reduce(t.term, redex);
+		t.selectedRedex = redex;
+		t.step = { instantiations, newTerm };
 
-		this.terms.push(newTerm);
+		this.terms.push({ term: newTerm, selectedRedex: null, step: null });
 	}
 
 	private componentDidMount() {
@@ -141,12 +163,24 @@ class EvaluationView extends React.Component<{ term: Syntaxes.Term, onHeightUpda
 		if (this.props.onHeightUpdate) this.props.onHeightUpdate();
 	}
 
+	private removeStep(idx: number) {
+		if (idx === 0) this.props.onRemove();
+		this.terms.splice(idx);
+	}
+
 	public render() {
-		
 		return (
 			<div className="evaluationView">
-				{createViewFor(this.props.term, new TermEvaluationViewContext(this, -1, this.props.term))}
-				{this.terms.map((t, idx) => [<br />, createViewFor(t, new TermEvaluationViewContext(this, idx, t))] )}
+				{this.terms.map((t, idx) => {
+						const prevStep = idx == 0 ? null : this.terms[idx - 1].step;
+						return (
+							<div className="evaluationStep">
+								<button onClick={() => this.removeStep(idx)}>X</button> 
+								{ createViewFor(t.term, new TermEvaluationViewContext(this, idx, t.term, t.selectedRedex, t.step, prevStep )) }
+							</div>
+						);
+					}
+				)}
 			</div>
 		);
 	}
@@ -173,15 +207,21 @@ class RunWidgetUI extends React.Component<{ term: Syntaxes.Term, editor: ICodeEd
 		var zone = { afterLineNumber: pos.lineNumber, 
 				domNode: d, heightInPx: 0, suppressMouseDown: false, id: -1 };
 
-		ReactDOM.render(<EvaluationView term={term} onHeightUpdate={() => {
-			
-			if (!d.childNodes[0]) return; 
-
-			zone.heightInPx = d.childNodes[0].clientHeight;
+		ReactDOM.render(<EvaluationView term={term} onRemove={() => { 
 			e.changeViewZones((accessor) => {
-				if (zone.id !== -1)
-					accessor.layoutZone(zone.id);
+				accessor.removeZone(zone.id);
 			});
+		}} 
+		onHeightUpdate={() => {
+			setTimeout(() => {
+				if (!d.childNodes[0]) return; 
+
+				zone.heightInPx = d.childNodes[0].offsetHeight + 20; // margin
+				e.changeViewZones((accessor) => {
+					if (zone.id !== -1)
+						accessor.layoutZone(zone.id);
+				});
+			}, 0);
 
 		}} />, d);
 		d.style.zIndex = "1";
@@ -285,6 +325,9 @@ true = x => y => x;
 false = x => y => y;
 
 (x => x x) (x => x x x);
+
+(a => (b => a) (x => a) a) (c => d) (c => f);
+
 `}
 					width="100%"
 					height="100%"

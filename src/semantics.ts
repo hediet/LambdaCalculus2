@@ -47,7 +47,12 @@ export function getAllRedexes(term: s.Term): s.Application[] {
 	return r;
 }
 
-export function reduce(term: s.Term, redex: s.Application): { newTerm: s.Term, instantiations: { variable: s.Variable, newValue: s.Term }[] } {
+export interface Instantiation {
+	variable: s.Variable;
+	newValue: s.Term;
+}
+
+export function reduce(term: s.Term, redex: s.Application): { newTerm: s.Term, instantiations: Instantiation[] } {
 
 	let instantiations: { variable: s.Variable, newValue: s.Term }[] = [];
 
