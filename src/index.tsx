@@ -321,12 +321,10 @@ class GUI extends React.Component<{}, {}> {
 			<div className="editor">
 				<MonacoEditor
 					defaultValue={`
-true = x => y => x;
-false = x => y => y;
 
-(x => x x) (x => x x x);
+(t => f => f) ((y => (x => x x) (x => x x)) ((x => x) (x => x))) (t => f => f);
 
-(a => (b => a) (x => a) a) (c => d) (c => f);
+y => (z => (x => x) (x => x) z) y;
 
 `}
 					width="100%"

@@ -345,7 +345,7 @@ webpackJsonp([0,2],{
 	    };
 	    GUI.prototype.render = function () {
 	        return (React.createElement("div", {className: "editor"}, 
-	            React.createElement(react_monaco_editor_1.default, {defaultValue: "\ntrue = x => y => x;\nfalse = x => y => y;\n\n(x => x x) (x => x x x);\n\n(a => (b => a) (x => a) a) (c => d) (c => f);\n\n", width: "100%", height: "100%", language: "lambda", editorDidMount: this.editorDidMount.bind(this), onChange: this.onChange.bind(this)})
+	            React.createElement(react_monaco_editor_1.default, {defaultValue: "\n\n(t => f => f) ((y => (x => x x) (x => x x)) ((x => x) (x => x))) (t => f => f);\n\ny => (z => (x => x) (x => x) z) y;\n\n", width: "100%", height: "100%", language: "lambda", editorDidMount: this.editorDidMount.bind(this), onChange: this.onChange.bind(this)})
 	        ));
 	    };
 	    GUI = __decorate([
@@ -962,4 +962,4 @@ webpackJsonp([0,2],{
 /***/ }
 
 });
-//# sourceMappingURL=main-f893ec69de718137ccde.js.map
+//# sourceMappingURL=main-ebe3f53b12567412a9aa.js.map
