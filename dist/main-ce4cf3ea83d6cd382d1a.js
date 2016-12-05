@@ -139,8 +139,9 @@ webpackJsonp([0,2],{
 	        var isRedexAbstraction = Analysis.isRedexAbstraction(this.props.term);
 	        return (React.createElement("span", {className: cn("term", "abstraction", isRedexAbstraction && "redex", isRedexArg && "redexArg", isCurrentRedex && "currentRedex", wasArg && "wasArg")}, 
 	            React.createElement("span", {className: "variableAndArrow"}, 
+	                "λ", 
 	                React.createElement("span", {className: "declaration variable", onClick: function () { return _this.clicked(); }, onMouseEnter: function () { return _this.mouseEnteredLeft(true); }, onMouseLeave: function () { return _this.mouseEnteredLeft(false); }}, this.props.term.variableDeclaration.variable.text), 
-	                React.createElement("span", {className: "arrow"}, " ⟹ ")), 
+	                React.createElement("span", {className: "arrow"}, " . ")), 
 	            createViewFor(this.props.term.term, this.props.termContext)));
 	    };
 	    AbstractionView = __decorate([
@@ -328,24 +329,26 @@ webpackJsonp([0,2],{
 	            editor.removeContentWidget(w);
 	        }
 	        this.widgets = [];
-	        var i = 0;
-	        for (var _d = 0, _e = doc.members.nodes; _d < _e.length; _d++) {
-	            var mb = _e[_d];
-	            if (mb instanceof Syntaxes.TermDocumentMember) {
-	                i++;
-	                var endPos = mb.getEndPos();
-	                var div = document.createElement("div");
-	                div.innerText = "run";
-	                var p = m.getPositionAt(endPos);
-	                var w_1 = new RunWidget(i, p, mb.term, editor);
-	                this.widgets.push(w_1);
-	                editor.addContentWidget(w_1);
+	        if (markers.length == 0) {
+	            var i = 0;
+	            for (var _d = 0, _e = doc.members.nodes; _d < _e.length; _d++) {
+	                var mb = _e[_d];
+	                if (mb instanceof Syntaxes.TermDocumentMember) {
+	                    i++;
+	                    var endPos = mb.getEndPos();
+	                    var div = document.createElement("div");
+	                    div.innerText = "run";
+	                    var p = m.getPositionAt(endPos);
+	                    var w_1 = new RunWidget(i, p, mb.term, editor);
+	                    this.widgets.push(w_1);
+	                    editor.addContentWidget(w_1);
+	                }
 	            }
 	        }
 	    };
 	    GUI.prototype.render = function () {
 	        return (React.createElement("div", {className: "editor"}, 
-	            React.createElement(react_monaco_editor_1.default, {defaultValue: "\n\n(t => f => f) ((y => (x => x x) (x => x x)) ((x => x) (x => x))) (t => f => f);\n\ny => (z => (x => x) (x => x) z) y;\n\n", width: "100%", height: "100%", language: "lambda", editorDidMount: this.editorDidMount.bind(this), onChange: this.onChange.bind(this)})
+	            React.createElement(react_monaco_editor_1.default, {defaultValue: "\n\n(t => f => f) ((y => (x => x x) (x => x x)) ((x => x) (x => x))) (t => f => f);\n\n\\y . (\\z . (\\x . x) (\\x . x) z) y;\n\n", width: "100%", height: "100%", language: "lambda", editorDidMount: this.editorDidMount.bind(this), onChange: this.onChange.bind(this)})
 	        ));
 	    };
 	    GUI = __decorate([
@@ -426,6 +429,8 @@ webpackJsonp([0,2],{
 	        _super.call(this);
 	        this.addSimpleRule("=>", syntax_1.TokenKind.FatArrow);
 	        this.addSimpleRule("->", syntax_1.TokenKind.SmallArrow);
+	        this.addSimpleRule("\\", syntax_1.TokenKind.Lambda);
+	        this.addSimpleRule(".", syntax_1.TokenKind.Dot);
 	        this.addSimpleRule("(", syntax_1.TokenKind.OpeningParen);
 	        this.addSimpleRule(")", syntax_1.TokenKind.ClosingParen);
 	        this.addSimpleRule(";", syntax_1.TokenKind.Semicolon);
@@ -591,6 +596,31 @@ webpackJsonp([0,2],{
 	        this.skipWs(lexer);
 	        var kind = lexer.getCurToken();
 	        switch (kind) {
+	            case syntax_1.TokenKind.Lambda:
+	                var lambda = lexer.getCur();
+	                lexer.next();
+	                this.skipWs(lexer);
+	                var nextToken = lexer.getCurToken();
+	                if (nextToken != syntax_1.TokenKind.Identifier)
+	                    return undefined;
+	                var varName = lexer.getCur();
+	                lexer.next();
+	                this.skipWs(lexer);
+	                var nextToken2 = lexer.getCurToken();
+	                if (nextToken2 != syntax_1.TokenKind.Dot)
+	                    return undefined;
+	                var dotToken = lexer.getCur();
+	                lexer.next();
+	                this.skipWs(lexer);
+	                var innerTerm = this.parseTerm(lexer, logger);
+	                var varDecl = new Syntaxes.VariableDeclaration();
+	                varDecl.variable = this.toToken(varName);
+	                var abstraction = new Syntaxes.LambdaAbstraction();
+	                abstraction.variableDeclaration = varDecl;
+	                abstraction.lambda = this.toToken(lambda);
+	                abstraction.dot = this.toToken(dotToken);
+	                abstraction.term = innerTerm;
+	                return abstraction;
 	            case syntax_1.TokenKind.Identifier:
 	                var identifierToken = lexer.getCur();
 	                var identifier = this.toToken(identifierToken);
@@ -600,14 +630,14 @@ webpackJsonp([0,2],{
 	                if (kind2 === syntax_1.TokenKind.FatArrow || kind2 === syntax_1.TokenKind.SmallArrow) {
 	                    var arrowToken = lexer.getCur();
 	                    lexer.next();
-	                    var innerTerm = this.parseTerm(lexer, logger);
-	                    var abstraction = new Syntaxes.Abstraction();
-	                    var varDecl = new Syntaxes.VariableDeclaration();
-	                    varDecl.variable = identifier;
-	                    abstraction.variableDeclaration = varDecl;
-	                    abstraction.arrow = this.toToken(arrowToken);
-	                    abstraction.term = innerTerm;
-	                    return abstraction;
+	                    var innerTerm_1 = this.parseTerm(lexer, logger);
+	                    var abstraction_1 = new Syntaxes.ArrowAbstraction();
+	                    var varDecl_1 = new Syntaxes.VariableDeclaration();
+	                    varDecl_1.variable = identifier;
+	                    abstraction_1.variableDeclaration = varDecl_1;
+	                    abstraction_1.arrow = this.toToken(arrowToken);
+	                    abstraction_1.term = innerTerm_1;
+	                    return abstraction_1;
 	                }
 	                var v = new Syntaxes.Variable();
 	                v.identifier = identifier;
@@ -615,7 +645,7 @@ webpackJsonp([0,2],{
 	            case syntax_1.TokenKind.OpeningParen: {
 	                var openParenToken = lexer.getCur();
 	                lexer.next();
-	                var innerTerm = this.parseTerm(lexer, logger);
+	                var innerTerm_2 = this.parseTerm(lexer, logger);
 	                var closeParenToken = getLexerPos(lexer);
 	                if (lexer.getCur().token === syntax_1.TokenKind.ClosingParen) {
 	                    closeParenToken = lexer.getCur();
@@ -626,7 +656,7 @@ webpackJsonp([0,2],{
 	                }
 	                var term = new Syntaxes.ParenthesizedTerm();
 	                term.openingParen = this.toToken(openParenToken);
-	                term.term = innerTerm;
+	                term.term = innerTerm_2;
 	                term.closingParen = this.toToken(closeParenToken);
 	                return term;
 	            }
@@ -685,15 +715,17 @@ webpackJsonp([0,2],{
 	(function (TokenKind) {
 	    TokenKind[TokenKind["FatArrow"] = 0] = "FatArrow";
 	    TokenKind[TokenKind["SmallArrow"] = 1] = "SmallArrow";
-	    TokenKind[TokenKind["OpeningParen"] = 2] = "OpeningParen";
-	    TokenKind[TokenKind["ClosingParen"] = 3] = "ClosingParen";
-	    TokenKind[TokenKind["Semicolon"] = 4] = "Semicolon";
-	    TokenKind[TokenKind["Equals"] = 5] = "Equals";
-	    TokenKind[TokenKind["WS"] = 6] = "WS";
-	    TokenKind[TokenKind["Comment"] = 7] = "Comment";
-	    TokenKind[TokenKind["Identifier"] = 8] = "Identifier";
-	    TokenKind[TokenKind["Invalid"] = 9] = "Invalid";
-	    TokenKind[TokenKind["Missing"] = 10] = "Missing";
+	    TokenKind[TokenKind["Dot"] = 2] = "Dot";
+	    TokenKind[TokenKind["Lambda"] = 3] = "Lambda";
+	    TokenKind[TokenKind["OpeningParen"] = 4] = "OpeningParen";
+	    TokenKind[TokenKind["ClosingParen"] = 5] = "ClosingParen";
+	    TokenKind[TokenKind["Semicolon"] = 6] = "Semicolon";
+	    TokenKind[TokenKind["Equals"] = 7] = "Equals";
+	    TokenKind[TokenKind["WS"] = 8] = "WS";
+	    TokenKind[TokenKind["Comment"] = 9] = "Comment";
+	    TokenKind[TokenKind["Identifier"] = 10] = "Identifier";
+	    TokenKind[TokenKind["Invalid"] = 11] = "Invalid";
+	    TokenKind[TokenKind["Missing"] = 12] = "Missing";
 	})(exports.TokenKind || (exports.TokenKind = {}));
 	var TokenKind = exports.TokenKind;
 	var Token = (function (_super) {
@@ -795,16 +827,34 @@ webpackJsonp([0,2],{
 	    return VariableDeclaration;
 	}(Syntax));
 	exports.VariableDeclaration = VariableDeclaration;
-	// variable => term
 	var Abstraction = (function (_super) {
 	    __extends(Abstraction, _super);
 	    function Abstraction() {
 	        _super.apply(this, arguments);
 	    }
-	    Abstraction.prototype.getChildren = function () { return [this.variableDeclaration, this.arrow, this.term]; };
 	    return Abstraction;
 	}(Term));
 	exports.Abstraction = Abstraction;
+	// variable => term
+	var ArrowAbstraction = (function (_super) {
+	    __extends(ArrowAbstraction, _super);
+	    function ArrowAbstraction() {
+	        _super.apply(this, arguments);
+	    }
+	    ArrowAbstraction.prototype.getChildren = function () { return [this.variableDeclaration, this.arrow, this.term]; };
+	    return ArrowAbstraction;
+	}(Abstraction));
+	exports.ArrowAbstraction = ArrowAbstraction;
+	// variable => term
+	var LambdaAbstraction = (function (_super) {
+	    __extends(LambdaAbstraction, _super);
+	    function LambdaAbstraction() {
+	        _super.apply(this, arguments);
+	    }
+	    LambdaAbstraction.prototype.getChildren = function () { return [this.lambda, this.variableDeclaration, this.dot, this.term]; };
+	    return LambdaAbstraction;
+	}(Abstraction));
+	exports.LambdaAbstraction = LambdaAbstraction;
 	// functionTerm argumentTerm
 	var Application = (function (_super) {
 	    __extends(Application, _super);
@@ -929,8 +979,17 @@ webpackJsonp([0,2],{
 	        v.identifier = term.identifier.clone();
 	        return v;
 	    }
-	    else if (term instanceof s.Abstraction) {
-	        var t = new s.Abstraction();
+	    else if (term instanceof s.LambdaAbstraction) {
+	        var t = new s.LambdaAbstraction();
+	        t.variableDeclaration = new s.VariableDeclaration();
+	        t.variableDeclaration.variable = term.variableDeclaration.variable.clone();
+	        t.lambda = term.lambda.clone();
+	        t.dot = term.dot.clone();
+	        t.term = clone(term.term, f);
+	        return t;
+	    }
+	    else if (term instanceof s.ArrowAbstraction) {
+	        var t = new s.ArrowAbstraction();
 	        t.variableDeclaration = new s.VariableDeclaration();
 	        t.variableDeclaration.variable = term.variableDeclaration.variable.clone();
 	        t.arrow = term.arrow.clone();
@@ -962,4 +1021,4 @@ webpackJsonp([0,2],{
 /***/ }
 
 });
-//# sourceMappingURL=main-ebe3f53b12567412a9aa.js.map
+//# sourceMappingURL=main-ce4cf3ea83d6cd382d1a.js.map

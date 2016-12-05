@@ -40,6 +40,8 @@ export abstract class Syntax {
 export enum TokenKind {
 	FatArrow,
 	SmallArrow,
+	Dot,
+	Lambda,
 	OpeningParen,
 	ClosingParen,
 	Semicolon,
@@ -128,13 +130,24 @@ export class VariableDeclaration extends Syntax {
 	public getChildren(): Syntax[] { return [this.variable]; }
 }
 
-// variable => term
-export class Abstraction extends Term {
+export abstract class Abstraction extends Term {
 	public variableDeclaration: VariableDeclaration;
-	public arrow: Token<TokenKind.FatArrow | TokenKind.SmallArrow>;
 	public term: Term;
+}
+
+// variable => term
+export class ArrowAbstraction extends Abstraction {
+	public arrow: Token<TokenKind.FatArrow | TokenKind.SmallArrow>;
 
 	public getChildren(): Syntax[] { return [this.variableDeclaration, this.arrow, this.term]; }
+}
+
+// variable => term
+export class LambdaAbstraction extends Abstraction {
+	public lambda: Token<TokenKind.Lambda>;
+	public dot: Token<TokenKind.Dot>;
+
+	public getChildren(): Syntax[] { return [this.lambda, this.variableDeclaration, this.dot, this.term]; }
 }
 
 

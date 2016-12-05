@@ -12,6 +12,8 @@ class LambdaLexerFactory extends LexerFactory<TokenKind, {}> {
 		
 		this.addSimpleRule("=>", TokenKind.FatArrow);
 		this.addSimpleRule("->", TokenKind.SmallArrow);
+		this.addSimpleRule("\\", TokenKind.Lambda);
+		this.addSimpleRule(".", TokenKind.Dot);
 		this.addSimpleRule("(", TokenKind.OpeningParen);
 		this.addSimpleRule(")", TokenKind.ClosingParen);
 		this.addSimpleRule(";", TokenKind.Semicolon);
@@ -219,6 +221,42 @@ export class Parser {
 		const kind = lexer.getCurToken();
 		
 		switch (kind) {
+			case TokenKind.Lambda:
+				const lambda = lexer.getCur() as TokenWithPosAndLen<TokenKind.Lambda>;
+				lexer.next();
+
+				this.skipWs(lexer);
+
+				const nextToken = lexer.getCurToken();
+				if (nextToken != TokenKind.Identifier)
+					return undefined;
+
+				const varName = lexer.getCur() as TokenWithPosAndLen<TokenKind.Identifier>;
+				
+				lexer.next();
+				this.skipWs(lexer);
+
+				const nextToken2 = lexer.getCurToken();
+				if (nextToken2 != TokenKind.Dot)
+					return undefined;
+
+				const dotToken = lexer.getCur() as TokenWithPosAndLen<TokenKind.Dot>;
+
+				lexer.next();
+				this.skipWs(lexer);
+				
+				const innerTerm = this.parseTerm(lexer, logger);
+
+				const varDecl = new Syntaxes.VariableDeclaration();
+				varDecl.variable = this.toToken(varName);
+
+				const abstraction = new Syntaxes.LambdaAbstraction();
+				abstraction.variableDeclaration = varDecl;
+				abstraction.lambda = this.toToken(lambda);
+				abstraction.dot = this.toToken(dotToken);
+				abstraction.term = innerTerm;
+				return abstraction;
+				
 			case TokenKind.Identifier:
 				const identifierToken = lexer.getCur() as TokenWithPosAndLen<TokenKind.Identifier>;
 				const identifier = this.toToken(identifierToken);
@@ -230,9 +268,9 @@ export class Parser {
 					const arrowToken = lexer.getCur() as TokenWithPosAndLen<TokenKind.FatArrow | TokenKind.SmallArrow>
 					lexer.next();
 					const innerTerm = this.parseTerm(lexer, logger);
-					var abstraction = new Syntaxes.Abstraction();
+					const abstraction = new Syntaxes.ArrowAbstraction();
 
-					var varDecl = new Syntaxes.VariableDeclaration();
+					const varDecl = new Syntaxes.VariableDeclaration();
 					varDecl.variable = identifier;
 
 					abstraction.variableDeclaration = varDecl;

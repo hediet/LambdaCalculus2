@@ -111,8 +111,17 @@ export function clone(term: s.Term, f: (t: s.Term) => s.Term): s.Term {
 		v.identifier = term.identifier.clone();
 		return v;
 	}
-	else if (term instanceof s.Abstraction) {
-		const t = new s.Abstraction();
+	else if (term instanceof s.LambdaAbstraction) {
+		const t = new s.LambdaAbstraction();
+		t.variableDeclaration = new s.VariableDeclaration();
+		t.variableDeclaration.variable = term.variableDeclaration.variable.clone();
+		t.lambda = term.lambda.clone();
+		t.dot = term.dot.clone();
+		t.term = clone(term.term, f);
+		return t;
+	}
+	else if (term instanceof s.ArrowAbstraction) {
+		const t = new s.ArrowAbstraction();
 		t.variableDeclaration = new s.VariableDeclaration();
 		t.variableDeclaration.variable = term.variableDeclaration.variable.clone();
 		t.arrow = term.arrow.clone();

@@ -101,8 +101,8 @@ class AbstractionView extends React.Component<{ term: Syntaxes.Abstraction, term
 		return (
 			<span className={cn("term", "abstraction", isRedexAbstraction && "redex", isRedexArg && "redexArg", isCurrentRedex && "currentRedex", wasArg && "wasArg")} >
 				<span className="variableAndArrow">
-					<span className="declaration variable" onClick={() => this.clicked()} onMouseEnter={() => this.mouseEnteredLeft(true)} onMouseLeave={() => this.mouseEnteredLeft(false)}>{this.props.term.variableDeclaration.variable.text}</span>
-					<span className="arrow"> ⟹ </span>
+					&lambda;<span className="declaration variable" onClick={() => this.clicked()} onMouseEnter={() => this.mouseEnteredLeft(true)} onMouseLeave={() => this.mouseEnteredLeft(false)}>{this.props.term.variableDeclaration.variable.text}</span>
+					<span className="arrow"> . </span>
 				</span> 
 				{createViewFor(this.props.term.term, this.props.termContext)}
 			</span>
@@ -299,19 +299,21 @@ class GUI extends React.Component<{}, {}> {
 
 		this.widgets = [];
 
-		let i = 0;
-		for (var mb of doc.members.nodes) {
-			if (mb instanceof Syntaxes.TermDocumentMember) {
-				i++;
-				const endPos = mb.getEndPos();
+		if (markers.length == 0) {
+			let i = 0;
+			for (var mb of doc.members.nodes) {
+				if (mb instanceof Syntaxes.TermDocumentMember) {
+					i++;
+					const endPos = mb.getEndPos();
 
-				var div = document.createElement("div");
-				div.innerText = "run";
+					var div = document.createElement("div");
+					div.innerText = "run";
 
-				const p = m.getPositionAt(endPos);
-				const w = new RunWidget(i, p, mb.term, editor);
-				this.widgets.push(w);
-				editor.addContentWidget(w);
+					const p = m.getPositionAt(endPos);
+					const w = new RunWidget(i, p, mb.term, editor);
+					this.widgets.push(w);
+					editor.addContentWidget(w);
+				}
 			}
 		}
 	}
@@ -324,7 +326,7 @@ class GUI extends React.Component<{}, {}> {
 
 (t => f => f) ((y => (x => x x) (x => x x)) ((x => x) (x => x))) (t => f => f);
 
-y => (z => (x => x) (x => x) z) y;
+\\y . (\\z . (\\x . x) (\\x . x) z) y;
 
 `}
 					width="100%"
